@@ -1361,6 +1361,16 @@ _dest_overflow:
 }
 
 
+/* LZ4HC_compress_optimal(): upstream's "optimal parser" for levels
+ * [LZ4HC_CLEVEL_OPT_MIN..LZ4HC_CLEVEL_MAX]. Its working set
+ * (LZ4HC_optimal_t opt[LZ4_OPT_NUM+1]) is ~64KB, far past the kernel's
+ * -Wframe-larger-than=2048 budget. Unlike LZ4_compress_fast() above,
+ * this path IS reachable in-kernel: fs/f2fs/compress.c lets userspace
+ * pick any HC level via the per-inode i_compress_level attribute, so
+ * simply excluding it would silently cap the max usable level. Instead,
+ * keep the real optimal parser for userspace builds and give kernel
+ * builds a stack-safe fallback at the one call site below. */
+#ifndef __KERNEL__
 static int LZ4HC_compress_optimal( LZ4HC_CCtx_internal* ctx,
     const char* const source, char* dst,
     int* srcSizePtr, int dstCapacity,
@@ -1368,6 +1378,7 @@ static int LZ4HC_compress_optimal( LZ4HC_CCtx_internal* ctx,
     const limitedOutput_directive limit, int const fullUpdate,
     const dictCtx_directive dict,
     const HCfavor_e favorDecSpeed);
+#endif
 
 LZ4_FORCE_INLINE int
 LZ4HC_compress_generic_internal (
@@ -1389,7 +1400,9 @@ LZ4HC_compress_generic_internal (
 
     ctx->end += *srcSizePtr;
     {   cParams_t const cParam = LZ4HC_getCLevelParams(cLevel);
+#ifndef __KERNEL__
         HCfavor_e const favor = ctx->favorDecSpeed ? favorDecompressionSpeed : favorCompressionRatio;
+#endif
         int result;
 
         if (cParam.strat == lz4mid) {
@@ -1402,11 +1415,22 @@ LZ4HC_compress_generic_internal (
                                 cParam.nbSearches, limit, dict);
         } else {
             assert(cParam.strat == lz4opt);
+#ifndef __KERNEL__
             result = LZ4HC_compress_optimal(ctx,
                                 src, dst, srcSizePtr, dstCapacity,
                                 cParam.nbSearches, cParam.targetLength, limit,
                                 cLevel >= LZ4HC_CLEVEL_MAX,   /* ultra mode */
                                 dict, favor);
+#else
+            /* Kernel fallback: LZ4HC_compress_optimal() is excluded (see
+             * comment above its declaration). Still honor the level's
+             * requested search depth via the hash-chain strategy instead
+             * of the optimal parser -- valid output, slightly lower
+             * compression ratio than true optimal parsing would give. */
+            result = LZ4HC_compress_hashChain(ctx,
+                                src, dst, srcSizePtr, dstCapacity,
+                                cParam.nbSearches, limit, dict);
+#endif
         }
         if (result <= 0) ctx->dirty = 1;
         return result;
@@ -1808,6 +1832,7 @@ LZ4HC_FindLongerMatch(LZ4HC_CCtx_internal* const ctx,
 }
 
 
+#ifndef __KERNEL__
 static int LZ4HC_compress_optimal ( LZ4HC_CCtx_internal* ctx,
                                     const char* const source,
                                     char* dst,
@@ -2109,6 +2134,7 @@ _return_label:
 #endif
      return retval;
 }
+#endif /* __KERNEL__ */
 
 
 /* state is presumed correctly sized, aka >= sizeof(LZ4_streamHC_t)

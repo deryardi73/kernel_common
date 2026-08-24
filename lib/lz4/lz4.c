@@ -1366,6 +1366,13 @@ int LZ4_compress_fast_extState_fastReset(void* state, const char* src, char* dst
 }
 
 
+/* LZ4_compress_fast(): not used in-kernel (nothing calls or exports it).
+ * With LZ4_HEAPMODE=0 (the kernel default) it puts a full LZ4_stream_t on
+ * the stack, which blows the kernel's -Wframe-larger-than limit. Kernel
+ * callers must go through LZ4_compress_default()/LZ4_compress_fast_extState()
+ * with caller-supplied workmem instead. Kept for userspace API parity with
+ * upstream lz4.c. */
+#ifndef __KERNEL__
 int LZ4_compress_fast(const char* src, char* dest, int srcSize, int dstCapacity, int acceleration)
 {
     int result;
@@ -1383,6 +1390,7 @@ int LZ4_compress_fast(const char* src, char* dest, int srcSize, int dstCapacity,
 #endif
     return result;
 }
+#endif /* __KERNEL__ */
 
 
 int LZ4_compress_default(const char* src, char* dst, int srcSize, int dstCapacity, void *wrkmem)
@@ -1420,6 +1428,11 @@ int LZ4_compress_destSize_extState(void* state, const char* src, char* dst, int*
 }
 
 
+/* LZ4_compress_destSize(): not used in-kernel (nothing calls or exports it).
+ * Same stack-frame issue as LZ4_compress_fast() above — kept for userspace
+ * API parity only. Kernel callers needing this behavior should use
+ * LZ4_compress_destSize_extState() with caller-supplied state instead. */
+#ifndef __KERNEL__
 int LZ4_compress_destSize(const char* src, char* dst, int* srcSizePtr, int targetDstSize)
 {
 #if (LZ4_HEAPMODE)
@@ -1437,6 +1450,7 @@ int LZ4_compress_destSize(const char* src, char* dst, int* srcSizePtr, int targe
 #endif
     return result;
 }
+#endif /* __KERNEL__ */
 
 
 

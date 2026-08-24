@@ -279,7 +279,7 @@ static void reschedule_output_poll_work(struct drm_device *dev)
 		 */
 		delay = HZ;
 
-	queue_delayed_work(system_power_efficient_wq
+	queue_delayed_work(system_power_efficient_wq,
 			&dev->mode_config.output_poll_work, delay);
 }
 

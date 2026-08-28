@@ -9,7 +9,6 @@ This module contains a full list of kernel modules
 _COMMON_GKI_MODULES_LIST = [
     # keep sorted
     "drivers/block/virtio_blk.ko",
-    "drivers/block/zram/zram.ko",
     "drivers/bluetooth/btbcm.ko",
     "drivers/bluetooth/btqca.ko",
     "drivers/bluetooth/btsdio.ko",
@@ -51,7 +50,6 @@ _COMMON_GKI_MODULES_LIST = [
     "drivers/virtio/virtio_pci_modern_dev.ko",
     "kernel/kheaders.ko",
     "lib/crypto/libarc4.ko",
-    "mm/zsmalloc.ko",
     "net/6lowpan/6lowpan.ko",
     "net/6lowpan/nhc_dest.ko",
     "net/6lowpan/nhc_fragment.ko",
@@ -196,9 +194,7 @@ def get_kunit_modules_list(arch = None):
     return kunit_modules_list
 
 _COMMON_UNPROTECTED_MODULES_LIST = [
-    "drivers/block/zram/zram.ko",
     "kernel/kheaders.ko",
-    "mm/zsmalloc.ko",
 ]
 
 # buildifier: disable=unnamed-macro
